@@ -1,0 +1,30 @@
+{
+  "name": "gpack",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "description": "A package manager for nodejs projects",
+  "author": "George Munyoro",
+  "bin": {
+    "gpack": "./dist/index.js"
+  },
+  "scripts": {
+    "test-script": "dd",
+    "build": "tsc",
+    "install-gpack": "yarn global add file:$PWD",
+    "uninstall-gpack": "yarn global remove file:$PWD",
+    "clean": "rm -rf dist",
+    "build-install": "yarn clean && yarn build && yarn install-gpack"
+  },
+  "dependencies": {
+    "@types/command-exists": "^1.2.0",
+    "command-exists": "^1.2.9",
+    "commander": "^10.0.1",
+    "figlet": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.5.6",
+    "@types/node": "^18.16.3",
+    "typescript": "^5.0.4"
+  }
+}

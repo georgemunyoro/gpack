@@ -1,9 +1,11 @@
 import {
   existsSync,
-  writeFileSync,
   mkdirSync,
   readFileSync,
   symlinkSync,
+  cpSync,
+  chmodSync,
+  rmSync,
 } from "fs";
 import tar from "tar";
 import path, { resolve } from "path";
@@ -14,6 +16,7 @@ import {
   DependencyTree,
   PackageJson,
 } from "./types";
+import { getPackage } from "../registry";
 
 const parsePackageVersion = (version?: string): string => {
   if (!version) return "latest";
@@ -32,18 +35,17 @@ const buildDependencyTree = async (
     const version = parsePackageVersion(rawVersion);
 
     dependencyPromises.push(
-      fetch(`https://registry.npmjs.org/${name}/${version}`)
-        .then((res) => res.json())
-        .then(async (packageJson) => {
-          tree[name] = {
-            dependencies: packageJson.dependencies
-              ? await buildDependencyTree(packageJson.dependencies)
-              : undefined,
-            name: packageJson.name,
-            version: packageJson.version,
-            bin: packageJson.bin,
-          };
-        })
+      getPackage(name, version).then(async (res) => {
+        const packageJson = res as unknown as PackageJson;
+        tree[name] = {
+          dependencies: packageJson.dependencies
+            ? await buildDependencyTree(packageJson.dependencies)
+            : undefined,
+          name: packageJson.name,
+          version: packageJson.version,
+          bin: packageJson.bin,
+        };
+      })
     );
   }
 
@@ -72,8 +74,16 @@ const generateDependencyTree = async (): Promise<DependencyTree> => {
 const downloadAndExtractPackage = async (
   name: string,
   version: string,
-  targetDir: string
+  targetDir: string,
+  filePackage?: string
 ): Promise<void> => {
+  if (filePackage?.startsWith("file:")) {
+    cpSync(filePackage.replace("file:", ""), targetDir, {
+      recursive: true,
+    });
+    return;
+  }
+
   const packageUrl = `https://registry.npmjs.org/${name}/-/${name.replace(
     "@types/",
     ""
@@ -85,7 +95,6 @@ const downloadAndExtractPackage = async (
     });
 
   return new Promise((resolve, reject) => {
-    console.log(name, version, packageUrl);
     https
       .get(packageUrl, (res) => {
         if (res.statusCode === 200) {
@@ -107,48 +116,103 @@ const downloadAndExtractPackage = async (
 
 const handlePackageBinaries = async (
   node: DependencyNode,
-  pathToPackage: string
+  pathToPackage: string,
+  moduleFolder: string = "node_modules"
 ): Promise<void> => {
   if (!node.bin) return;
 
   for (const binaryName of Object.keys(node.bin)) {
-    const symlinksPath = path.join(process.cwd(), "node_modules", ".bin");
+    const symlinksPath = path.join(moduleFolder, ".bin");
     if (!existsSync(symlinksPath)) mkdirSync(symlinksPath, { recursive: true });
     const binaryPath = path.join(pathToPackage, node.bin[binaryName]);
-    const symlinkPath = path.join(
-      process.cwd(),
-      "node_modules",
-      ".bin",
-      binaryName
-    );
-    symlinkSync(binaryPath, symlinkPath, "file");
+    const symlinkPath = path.join(moduleFolder, ".bin", binaryName);
+
+    if (!existsSync(symlinkPath)) symlinkSync(binaryPath, symlinkPath, "file");
+    // make sure the symlink is executable
+    chmodSync(symlinkPath, "755");
   }
 };
 
 const buildNodeModules = async (
   tree: DependencyTree,
-  basePath: string = "./node_modules"
+  basePath: string = "./node_modules",
+  force?: boolean
 ): Promise<void> => {
-  basePath = path.resolve(process.cwd(), basePath);
+  basePath = path.resolve(basePath);
 
-  for (const node of Object.values(tree)) {
+  for (const [index, node] of Object.entries(tree)) {
     if (node === undefined || !node.name) continue;
-
-    console.log(`Installing ${node.name}@${node.version}...`);
     const packagePath = path.join(basePath, node.name);
+
+    const alreadyInstalled = existsSync(path.join(basePath, node.name));
+    if (alreadyInstalled) {
+      if (force) {
+        console.log(`Reinstalling ${node.name}@${node.version}`);
+        rmSync(packagePath, { recursive: true });
+        Object.keys(node.bin || {}).forEach((bin) => {
+          rmSync(path.join(basePath, ".bin", bin));
+        });
+      } else {
+        console.log(
+          `Skipping ${node.name}@${node.version} - already installed`
+        );
+        continue;
+      }
+    }
+
+    console.log(`Installing ${node.name}@${node.version}`);
     const packageVersionPath = path.join(packagePath, "node_modules");
-    await downloadAndExtractPackage(node.name, node.version, packagePath);
-    await handlePackageBinaries(node, packagePath);
+    await downloadAndExtractPackage(
+      node.name,
+      node.version,
+      packagePath,
+      index
+    );
+
+    await handlePackageBinaries(node, packagePath, basePath);
 
     if (node.dependencies) {
-      await buildNodeModules(node.dependencies, packageVersionPath);
+      await buildNodeModules(node.dependencies, packageVersionPath, force);
     }
   }
 };
 
-const install = async (modules?: string[]) => {
+const installPackage = async (
+  name: string,
+  opts: {
+    global?: boolean;
+    force?: boolean;
+  }
+) => {
+  const [packageName, packageVersion] = name.split("@");
+
+  const dependencyTree = await buildDependencyTree({
+    [packageName]: packageVersion,
+  });
+
+  await buildNodeModules(
+    dependencyTree,
+    opts.global ? `${process.env.HOME}/.gpack/node_modules` : "./node_modules",
+    opts.force
+  );
+};
+
+const install = async (
+  modules?: string[],
+  opts: {
+    global?: boolean;
+    force?: boolean;
+  } = {}
+) => {
+  if (modules) {
+    for (const module of modules) {
+      await installPackage(module, opts);
+    }
+    return;
+  }
+
   const dependencyTree = await generateDependencyTree();
-  buildNodeModules(dependencyTree);
+  buildNodeModules(dependencyTree, "./node_modules", opts.force);
 };
 
 export default install;

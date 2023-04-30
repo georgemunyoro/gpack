@@ -17,8 +17,13 @@ export interface DependencyTree {
 }
 
 export interface PackageJson {
+  name: string;
+  version: string;
   dependencies?: Dependencies;
   devDependencies?: Dependencies;
+  bin?: {
+    [key: string]: string;
+  };
 }
 
 export interface DependencyInfo {

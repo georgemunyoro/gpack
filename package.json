@@ -9,18 +9,19 @@
     "gpack": "./dist/index.js"
   },
   "scripts": {
-    "test-script": "dd",
     "build": "tsc",
-    "install-gpack": "yarn global add file:$PWD",
-    "uninstall-gpack": "yarn global remove file:$PWD",
+    "gpack:install": "gpack install file:${PWD} --global --force",
+    "gpack:uninstall": "gpack uninstall file:${PWD} --global",
     "clean": "rm -rf dist",
-    "build-install": "yarn clean && yarn build && yarn install-gpack"
+    "gpack:build-install": "gpack run clean && gpack run build && gpack run gpack:install"
   },
   "dependencies": {
     "@types/command-exists": "^1.2.0",
+    "@types/tar": "^6.1.4",
     "command-exists": "^1.2.9",
     "commander": "^10.0.1",
-    "figlet": "^1.6.0"
+    "figlet": "^1.6.0",
+    "tar": "^6.1.13"
   },
   "devDependencies": {
     "@types/figlet": "^1.5.6",

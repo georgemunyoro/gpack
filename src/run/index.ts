@@ -1,16 +1,24 @@
-import { spawn, spawnSync } from "child_process";
+import { spawnSync } from "child_process";
 import { readPackageJson } from "../utils/packageJson";
 import fs from "fs";
 import commandExists from "command-exists";
+import path from "path";
 
 /**
  * Get a list of all the binaries available to run
  * @returns list of binaries, e.g. ["eslint", "prettier"]
  */
 const getAvailableBinaries = () => {
+  const globalBinPath = path.resolve(
+    process.env.HOME as string,
+    ".gpack/node_modules/.bin"
+  );
   const nodeModulesBinPath = "./node_modules/.bin";
   const binaries = fs.readdirSync(nodeModulesBinPath);
-  return binaries;
+  if (!fs.existsSync(globalBinPath))
+    fs.mkdirSync(globalBinPath, { recursive: true });
+  const globalBinaries = fs.readdirSync(globalBinPath);
+  return [...binaries, ...globalBinaries];
 };
 
 /**
@@ -67,10 +75,34 @@ const executeScript = async (script: string) => {
 
   const binaryPath = isSystemCommand ? command : getBinaryPath(command);
 
+  // replace env variables in args
+  const replacedArgs = args.map((arg) => {
+    // const envVar = arg.match(/\${(.*)}/);
+
+    // find all env variables in the arg and replace them with their values
+    const envVars = arg.match(/\${(.*)}/g);
+    if (envVars) {
+      for (const envVar of envVars) {
+        const envVarName = envVar.replace("${", "").replace("}", "");
+        const envVarValue = process.env[envVarName];
+        if (!envVarValue) {
+          console.error(
+            `Environment variable "${envVarName}" not found in .env file`
+          );
+          process.exit(1);
+        }
+        arg = arg.replace(envVar, envVarValue);
+      }
+    }
+
+    return arg;
+  });
+
   // Run the script
-  const child = spawnSync(binaryPath, args, {
+  const child = spawnSync(binaryPath, replacedArgs, {
     stdio: "inherit",
     cwd: process.cwd(),
+    env: process.env,
   });
 };
 

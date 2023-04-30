@@ -1,0 +1,130 @@
+{
+  "command-exists": {
+    "name": "command-exists",
+    "version": "1.2.9"
+  },
+  "figlet": {
+    "name": "figlet",
+    "version": "1.6.0",
+    "bin": {
+      "figlet": "bin/index.js"
+    }
+  },
+  "commander": {
+    "name": "commander",
+    "version": "10.0.1"
+  },
+  "typescript": {
+    "name": "typescript",
+    "version": "5.0.4",
+    "bin": {
+      "tsc": "bin/tsc",
+      "tsserver": "bin/tsserver"
+    }
+  },
+  "tar": {
+    "dependencies": {
+      "chownr": {
+        "name": "chownr",
+        "version": "2.0.0"
+      },
+      "mkdirp": {
+        "name": "mkdirp",
+        "version": "1.0.3",
+        "bin": {
+          "mkdirp": "bin/cmd.js"
+        }
+      },
+      "minipass": {
+        "dependencies": {
+          "yallist": {
+            "dependencies": {},
+            "name": "yallist",
+            "version": "4.0.0"
+          }
+        },
+        "name": "minipass",
+        "version": "4.0.0"
+      },
+      "yallist": {
+        "dependencies": {},
+        "name": "yallist",
+        "version": "4.0.0"
+      },
+      "fs-minipass": {
+        "dependencies": {
+          "minipass": {
+            "dependencies": {
+              "yallist": {
+                "dependencies": {},
+                "name": "yallist",
+                "version": "4.0.0"
+              }
+            },
+            "name": "minipass",
+            "version": "3.0.0"
+          }
+        },
+        "name": "fs-minipass",
+        "version": "2.0.0"
+      },
+      "minizlib": {
+        "dependencies": {
+          "yallist": {
+            "dependencies": {},
+            "name": "yallist",
+            "version": "4.0.0"
+          },
+          "minipass": {
+            "dependencies": {
+              "yallist": {
+                "dependencies": {},
+                "name": "yallist",
+                "version": "4.0.0"
+              }
+            },
+            "name": "minipass",
+            "version": "3.0.0"
+          }
+        },
+        "name": "minizlib",
+        "version": "2.1.1"
+      }
+    },
+    "name": "tar",
+    "version": "6.1.13"
+  },
+  "@types/figlet": {
+    "dependencies": {},
+    "name": "@types/figlet",
+    "version": "1.5.6"
+  },
+  "@types/node": {
+    "dependencies": {},
+    "name": "@types/node",
+    "version": "18.16.3"
+  },
+  "@types/command-exists": {
+    "dependencies": {},
+    "name": "@types/command-exists",
+    "version": "1.2.0"
+  },
+  "@types/tar": {
+    "dependencies": {
+      "minipass": {
+        "dependencies": {
+          "yallist": {
+            "dependencies": {},
+            "name": "yallist",
+            "version": "4.0.0"
+          }
+        },
+        "name": "minipass",
+        "version": "4.0.0"
+      },
+      "@types/node": {}
+    },
+    "name": "@types/tar",
+    "version": "6.1.4"
+  }
+}

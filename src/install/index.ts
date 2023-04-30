@@ -6,6 +6,7 @@ import {
   cpSync,
   chmodSync,
   rmSync,
+  writeFileSync,
 } from "fs";
 import tar from "tar";
 import path, { resolve } from "path";
@@ -54,6 +55,16 @@ const buildDependencyTree = async (
 };
 
 const generateDependencyTree = async (): Promise<DependencyTree> => {
+  const hasLockfile = existsSync(resolve(process.cwd(), "gpack-lock.json"));
+  if (hasLockfile) {
+    const rawLockfile = readFileSync(
+      resolve(process.cwd(), "gpack-lock.json"),
+      "utf-8"
+    );
+    const lockfile = JSON.parse(rawLockfile) as DependencyTree;
+    return lockfile;
+  }
+
   const packageJsonPath = resolve(process.cwd(), "package.json");
   const rawPackageJson = readFileSync(packageJsonPath, "utf-8");
   const packageJson = JSON.parse(rawPackageJson) as PackageJson;
@@ -68,7 +79,9 @@ const generateDependencyTree = async (): Promise<DependencyTree> => {
     process.exit(1);
   }
 
-  return buildDependencyTree(allDependencies);
+  const tree = await buildDependencyTree(allDependencies);
+  writeFileSync("gpack-lock.json", JSON.stringify(tree, null, 2), "utf-8");
+  return tree;
 };
 
 const downloadAndExtractPackage = async (
@@ -204,7 +217,7 @@ const install = async (
     force?: boolean;
   } = {}
 ) => {
-  if (modules) {
+  if (modules?.length) {
     for (const module of modules) {
       await installPackage(module, opts);
     }

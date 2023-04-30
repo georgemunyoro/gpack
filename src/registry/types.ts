@@ -3,8 +3,18 @@ export type PackageVersion = {
   version: string;
   description: string;
   main: string;
+  dependencies: {
+    [name: string]: string;
+  };
   scripts: {
     [script: string]: string;
+  };
+  dist: {
+    integrity: string;
+    shasum: string;
+    tarball: string;
+    fileCount: number;
+    unpackedSize: number;
   };
 };
 

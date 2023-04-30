@@ -8,7 +8,7 @@ import query from "./query";
 const program = new Command();
 
 program
-  .version(process.version)
+  // .version(process.version)
   .description("A CLI tool for managing your nodejs packages");
 
 program
@@ -19,7 +19,7 @@ program
 program.command("info <module>").action(query).description("Query a module");
 
 program
-  .command("run <command>")
+  .command("run <command> [args...]")
   .action(runScript)
   .description("Run a package script");
 

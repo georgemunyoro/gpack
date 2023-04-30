@@ -30,3 +30,10 @@ export interface DependencyInfo {
   name: string;
   version: string;
 }
+
+export interface InstallOptions {
+  global?: boolean;
+  force?: boolean;
+  "save-dev"?: boolean;
+  save?: boolean;
+}

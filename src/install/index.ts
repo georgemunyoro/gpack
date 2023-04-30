@@ -15,6 +15,7 @@ import {
   Dependencies,
   DependencyNode,
   DependencyTree,
+  InstallOptions,
   PackageJson,
 } from "./types";
 import { getPackage } from "../registry";
@@ -24,6 +25,25 @@ const parsePackageVersion = (version?: string): string => {
   if (version.startsWith("^")) return version.slice(1);
   if (version.startsWith("~")) return version.slice(1);
   return version;
+};
+
+/**
+ * Sorts a dependency tree alphabetically, recursively
+ * @param tree
+ * @returns
+ */
+const sortTreeDeep = (tree: DependencyTree): DependencyTree => {
+  const sortedTree: DependencyTree = {};
+  const sortedKeys = Object.keys(tree).sort();
+
+  for (let key of sortedKeys) {
+    sortedTree[key] = tree[key];
+    const dependencyTree = sortedTree[key].dependencies;
+    if (dependencyTree)
+      sortedTree[key].dependencies = sortTreeDeep(dependencyTree);
+  }
+
+  return sortedTree;
 };
 
 const buildDependencyTree = async (
@@ -80,7 +100,12 @@ const generateDependencyTree = async (): Promise<DependencyTree> => {
   }
 
   const tree = await buildDependencyTree(allDependencies);
-  writeFileSync("gpack-lock.json", JSON.stringify(tree, null, 2), "utf-8");
+
+  writeFileSync(
+    "gpack-lock.json",
+    JSON.stringify(sortTreeDeep(tree), null, 2) + "\n",
+    "utf-8"
+  );
   return tree;
 };
 
@@ -190,42 +215,70 @@ const buildNodeModules = async (
   }
 };
 
-const installPackage = async (
-  name: string,
-  opts: {
-    global?: boolean;
-    force?: boolean;
-  }
-) => {
+const installPackage = async (name: string, opts: InstallOptions) => {
   const [packageName, packageVersion] = name.split("@");
 
-  const dependencyTree = await buildDependencyTree({
-    [packageName]: packageVersion,
-  });
+  let dependencyTree = {};
+
+  const packageJsonPath = resolve(process.cwd(), "package.json");
+  const rawPackageJson = readFileSync(packageJsonPath, "utf-8");
+  const packageJson = JSON.parse(rawPackageJson) as PackageJson;
+
+  if (opts.global) {
+    dependencyTree = await buildDependencyTree({
+      [packageName]: packageVersion,
+    });
+  } else {
+    if (opts["save-dev"]) {
+      packageJson.devDependencies = {
+        ...packageJson.devDependencies,
+        [packageName]: packageVersion,
+      };
+    } else {
+      packageJson.dependencies = {
+        ...packageJson.dependencies,
+        [packageName]: packageVersion,
+      };
+    }
+
+    dependencyTree = await buildDependencyTree({
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    });
+
+    writeFileSync(
+      "gpack-lock.json",
+      JSON.stringify(dependencyTree, null, 2),
+      "utf-8"
+    );
+  }
 
   await buildNodeModules(
     dependencyTree,
     opts.global ? `${process.env.HOME}/.gpack/node_modules` : "./node_modules",
     opts.force
   );
+
+  // update package.json
+  writeFileSync(
+    packageJsonPath + "\n",
+    JSON.stringify(packageJson, null, 2),
+    "utf-8"
+  );
 };
 
-const install = async (
-  modules?: string[],
-  opts: {
-    global?: boolean;
-    force?: boolean;
-  } = {}
-) => {
+const install = async (modules?: string[], opts: InstallOptions = {}) => {
   if (modules?.length) {
     for (const module of modules) {
       await installPackage(module, opts);
+      console.log("✨ Done!");
     }
     return;
   }
 
   const dependencyTree = await generateDependencyTree();
-  buildNodeModules(dependencyTree, "./node_modules", opts.force);
+  await buildNodeModules(dependencyTree, "./node_modules", opts.force);
+  console.log("✨ Done!");
 };
 
 export default install;

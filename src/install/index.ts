@@ -253,9 +253,15 @@ const installPackage = async (name: string, opts: InstallOptions) => {
     );
   }
 
+  const globalInstallPath = `${process.env.HOME}/.gpack/node_modules`;
+
+  if (opts.global && !existsSync(globalInstallPath)) {
+    mkdirSync(globalInstallPath, { recursive: true });
+  }
+
   await buildNodeModules(
     dependencyTree,
-    opts.global ? `${process.env.HOME}/.gpack/node_modules` : "./node_modules",
+    opts.global ? globalInstallPath : "./node_modules",
     opts.force
   );
 

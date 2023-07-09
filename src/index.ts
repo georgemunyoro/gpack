@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import runScript from "./run";
+import runScript, { listAllScripts } from "./run";
 import install from "./install";
 import query from "./query";
 
@@ -26,5 +26,10 @@ program
   .command("run <command> [args...]")
   .action(runScript)
   .description("Run a package script");
+
+program
+  .command("scripts")
+  .action(listAllScripts)
+  .description("List all scripts");
 
 program.parse();

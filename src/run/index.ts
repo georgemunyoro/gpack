@@ -106,4 +106,12 @@ const executeScript = async (script: string) => {
   });
 };
 
+export const listAllScripts = () => {
+  const { scripts } = readPackageJson();
+  console.log("Available scripts:");
+  for (const scriptName in scripts) {
+    console.log(` - \x1b[33m${scriptName} \x1b[0m${scripts[scriptName]}`);
+  }
+};
+
 export default runScript;
